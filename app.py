@@ -283,7 +283,7 @@ def profile():
             except IntegrityError:
                 flash("Username or email already in use", "danger")
                 return render_template("users/edit.html", form=form)
-
+        #Flash message when authentication is false
         return redirect(f"/users/{g.user.id}")
     else:
         return render_template("users/edit.html", form=form)
@@ -394,8 +394,8 @@ def homepage():
         # messages
         show_tweets_from_users_ids = [
             followed_user.id for followed_user in g.user.following
-        ]
-        show_tweets_from_users_ids.append(g.user.id)
+        ] + [g.user.id]
+
         messages = (
             Message.query.order_by(Message.timestamp.desc())
             .filter(Message.user_id.in_(show_tweets_from_users_ids))
