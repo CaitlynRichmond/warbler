@@ -4,9 +4,14 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
-from werkzeug.exceptions import Unauthorized
 
-from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm
+from forms import (
+    UserAddForm,
+    LoginForm,
+    MessageForm,
+    CSRFProtectForm,
+    UserEditForm,
+)
 from models import db, connect_db, User, Message
 
 load_dotenv()
@@ -71,7 +76,7 @@ def signup():
     and re-present form.
     """
 
-    if CURR_USER_KEY in session:
+    if g.user:
         return redirect("/")
 
     form = UserAddForm()
@@ -102,7 +107,7 @@ def signup():
 def login():
     """Handle user login and redirect to homepage on success."""
 
-    if CURR_USER_KEY in session:
+    if g.user:
         return redirect("/")
 
     form = LoginForm()
@@ -237,7 +242,6 @@ def stop_following(follow_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-
     form = g.csrf_form
 
     if form.validate_on_submit():
@@ -251,13 +255,38 @@ def stop_following(follow_id):
         return redirect("/")
 
 
-
-
 @app.route("/users/profile", methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS TODO: CSRF Too
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    form = UserEditForm(obj=g.user)
+
+    if form.validate_on_submit():
+        valid_pass = User.authenticate(
+            g.user.username,
+            form.password.data,
+        )
+
+        if valid_pass:
+            try:
+                data = {
+                    k: v
+                    for k, v in form.data.items()
+                    if k != "csrf_token" and k != "password"
+                }
+                g.user.edit_user(**data)
+                db.session.commit()
+            except IntegrityError:
+                flash("Username already taken", "danger")
+                return render_template("users/edit.html", form=form)
+
+        return redirect(f"/users/{g.user.id}")
+    else:
+        return render_template("users/edit.html", form=form)
 
 
 @app.post("/users/delete")
@@ -275,16 +304,13 @@ def delete_user():
 
     if form.validate_on_submit():
         do_logout()
-
-        db.session.delete(g.user)
+        User.query.filter_by(id=g.user.id).delete()
         db.session.commit()
 
         return redirect("/signup")
     else:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
-
 
 
 ##############################################################################
@@ -351,8 +377,6 @@ def delete_message(message_id):
         return redirect("/")
 
 
-
-
 ##############################################################################
 # Homepage and error pages
 
@@ -365,7 +389,19 @@ def homepage():
     - logged in: 100 most recent messages of self & followed_users
     """
     if g.user:
-        messages = Message.query.order_by(Message.timestamp.desc()).limit(100).all()
+        # If we're logged in as user
+        # we want messages to be the users messages and the user they are following
+        # messages
+        show_tweets_from_users_ids = [
+            followed_user.id for followed_user in g.user.following
+        ]
+        show_tweets_from_users_ids.append(g.user.id)
+        messages = (
+            Message.query.order_by(Message.timestamp.desc())
+            .filter(Message.user_id.in_(show_tweets_from_users_ids))
+            .limit(100)
+            .all()
+        )
 
         return render_template("home.html", messages=messages)
 

@@ -9,7 +9,8 @@ bcrypt = Bcrypt()
 db = SQLAlchemy()
 
 DEFAULT_IMAGE_URL = (
-    "https://icon-library.com/images/default-user-icon/" + "default-user-icon-28.jpg"
+    "https://icon-library.com/images/default-user-icon/"
+    + "default-user-icon-28.jpg"
 )
 
 DEFAULT_HEADER_IMAGE_URL = (
@@ -144,15 +145,27 @@ class User(db.Model):
     def is_followed_by(self, other_user):
         """Is this user followed by `other_user`?"""
 
-        found_user_list = [user for user in self.followers if user == other_user]
+        found_user_list = [
+            user for user in self.followers if user == other_user
+        ]
         return len(found_user_list) == 1
 
     def is_following(self, other_user):
         """Is this user following `other_user`?"""
 
-        found_user_list = [user for user in self.following if user == other_user]
+        found_user_list = [
+            user for user in self.following if user == other_user
+        ]
         return len(found_user_list) == 1
 
+    def edit_user(self, username, email, image_url, header_image_url, bio):
+        """Edits user profile"""
+
+        self.username = username
+        self.email = email
+        self.image_url = image_url or DEFAULT_IMAGE_URL
+        self.header_image_url = header_image_url or DEFAULT_HEADER_IMAGE_URL
+        self.bio = bio
 
 class Message(db.Model):
     """An individual message ("warble")."""
