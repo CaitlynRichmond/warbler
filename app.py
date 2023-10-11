@@ -4,8 +4,9 @@ from dotenv import load_dotenv
 from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import Unauthorized
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, CSRFProtectForm
 from models import db, connect_db, User, Message
 
 load_dotenv()
@@ -14,10 +15,10 @@ CURR_USER_KEY = "curr_user"
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
-app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
+app.config["SQLALCHEMY_ECHO"] = False
+app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = True
+app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
@@ -38,6 +39,13 @@ def add_user_to_g():
         g.user = None
 
 
+@app.before_request
+def add_csrf_form_to_g():
+    """Add a csrf form to Flask global"""
+
+    g.csrf_form = CSRFProtectForm()
+
+
 def do_login(user):
     """Log in user."""
 
@@ -51,7 +59,7 @@ def do_logout():
         del session[CURR_USER_KEY]
 
 
-@app.route('/signup', methods=["GET", "POST"])
+@app.route("/signup", methods=["GET", "POST"])
 def signup():
     """Handle user signup.
 
@@ -63,7 +71,8 @@ def signup():
     and re-present form.
     """
 
-    do_logout()
+    if CURR_USER_KEY in session:
+        return redirect("/")
 
     form = UserAddForm()
 
@@ -78,20 +87,23 @@ def signup():
             db.session.commit()
 
         except IntegrityError:
-            flash("Username already taken", 'danger')
-            return render_template('users/signup.html', form=form)
+            flash("Username already taken", "danger")
+            return render_template("users/signup.html", form=form)
 
         do_login(user)
 
         return redirect("/")
 
     else:
-        return render_template('users/signup.html', form=form)
+        return render_template("users/signup.html", form=form)
 
 
-@app.route('/login', methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     """Handle user login and redirect to homepage on success."""
+
+    if CURR_USER_KEY in session:
+        return redirect("/")
 
     form = LoginForm()
 
@@ -106,17 +118,24 @@ def login():
             flash(f"Hello, {user.username}!", "success")
             return redirect("/")
 
-        flash("Invalid credentials.", 'danger')
+        flash("Invalid credentials.", "danger")
 
-    return render_template('users/login.html', form=form)
+    return render_template("users/login.html", form=form)
 
 
-@app.post('/logout')
+@app.post("/logout")
 def logout():
     """Handle logout of user and redirect to homepage."""
 
     form = g.csrf_form
 
+    if form.validate_on_submit():
+        do_logout()
+        flash("Logged out, Going so soon :(", "success")
+        return redirect("/login")
+
+    else:
+        raise Unauthorized
     # IMPLEMENT THIS AND FIX BUG
     # DO NOT CHANGE METHOD ON ROUTE
 
@@ -124,7 +143,8 @@ def logout():
 ##############################################################################
 # General user routes:
 
-@app.get('/users')
+
+@app.get("/users")
 def list_users():
     """Page with listing of users.
 
@@ -135,17 +155,17 @@ def list_users():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    search = request.args.get('q')
+    search = request.args.get("q")
 
     if not search:
         users = User.query.all()
     else:
         users = User.query.filter(User.username.like(f"%{search}%")).all()
 
-    return render_template('users/index.html', users=users)
+    return render_template("users/index.html", users=users)
 
 
-@app.get('/users/<int:user_id>')
+@app.get("/users/<int:user_id>")
 def show_user(user_id):
     """Show user profile."""
 
@@ -155,10 +175,10 @@ def show_user(user_id):
 
     user = User.query.get_or_404(user_id)
 
-    return render_template('users/show.html', user=user)
+    return render_template("users/show.html", user=user)
 
 
-@app.get('/users/<int:user_id>/following')
+@app.get("/users/<int:user_id>/following")
 def show_following(user_id):
     """Show list of people this user is following."""
 
@@ -167,10 +187,10 @@ def show_following(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/following.html', user=user)
+    return render_template("users/following.html", user=user)
 
 
-@app.get('/users/<int:user_id>/followers')
+@app.get("/users/<int:user_id>/followers")
 def show_followers(user_id):
     """Show list of followers of this user."""
 
@@ -179,10 +199,10 @@ def show_followers(user_id):
         return redirect("/")
 
     user = User.query.get_or_404(user_id)
-    return render_template('users/followers.html', user=user)
+    return render_template("users/followers.html", user=user)
 
 
-@app.post('/users/follow/<int:follow_id>')
+@app.post("/users/follow/<int:follow_id>")
 def start_following(follow_id):
     """Add a follow for the currently-logged-in user.
 
@@ -193,14 +213,20 @@ def start_following(follow_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    followed_user = User.query.get_or_404(follow_id)
-    g.user.following.append(followed_user)
-    db.session.commit()
+    form = g.csrf_form
 
-    return redirect(f"/users/{g.user.id}/following")
+    if form.validate_on_submit():
+        followed_user = User.query.get_or_404(follow_id)
+        g.user.following.append(followed_user)
+        db.session.commit()
+
+        return redirect(f"/users/{g.user.id}/following")
+
+    else:
+        raise Unauthorized
 
 
-@app.post('/users/stop-following/<int:follow_id>')
+@app.post("/users/stop-following/<int:follow_id>")
 def stop_following(follow_id):
     """Have currently-logged-in-user stop following this user.
 
@@ -218,14 +244,14 @@ def stop_following(follow_id):
     return redirect(f"/users/{g.user.id}/following")
 
 
-@app.route('/users/profile', methods=["GET", "POST"])
+@app.route("/users/profile", methods=["GET", "POST"])
 def profile():
     """Update profile for current user."""
 
     # IMPLEMENT THIS
 
 
-@app.post('/users/delete')
+@app.post("/users/delete")
 def delete_user():
     """Delete user.
 
@@ -247,7 +273,8 @@ def delete_user():
 ##############################################################################
 # Messages routes:
 
-@app.route('/messages/new', methods=["GET", "POST"])
+
+@app.route("/messages/new", methods=["GET", "POST"])
 def add_message():
     """Add a message:
 
@@ -267,10 +294,10 @@ def add_message():
 
         return redirect(f"/users/{g.user.id}")
 
-    return render_template('messages/create.html', form=form)
+    return render_template("messages/create.html", form=form)
 
 
-@app.get('/messages/<int:message_id>')
+@app.get("/messages/<int:message_id>")
 def show_message(message_id):
     """Show a message."""
 
@@ -279,10 +306,10 @@ def show_message(message_id):
         return redirect("/")
 
     msg = Message.query.get_or_404(message_id)
-    return render_template('messages/show.html', message=msg)
+    return render_template("messages/show.html", message=msg)
 
 
-@app.post('/messages/<int:message_id>/delete')
+@app.post("/messages/<int:message_id>/delete")
 def delete_message(message_id):
     """Delete a message.
 
@@ -305,25 +332,20 @@ def delete_message(message_id):
 # Homepage and error pages
 
 
-@app.get('/')
+@app.get("/")
 def homepage():
     """Show homepage:
 
     - anon users: no messages
     - logged in: 100 most recent messages of self & followed_users
     """
-
     if g.user:
-        messages = (Message
-                    .query
-                    .order_by(Message.timestamp.desc())
-                    .limit(100)
-                    .all())
+        messages = Message.query.order_by(Message.timestamp.desc()).limit(100).all()
 
-        return render_template('home.html', messages=messages)
+        return render_template("home.html", messages=messages)
 
     else:
-        return render_template('home-anon.html')
+        return render_template("home-anon.html")
 
 
 @app.after_request

@@ -9,29 +9,30 @@ bcrypt = Bcrypt()
 db = SQLAlchemy()
 
 DEFAULT_IMAGE_URL = (
-    "https://icon-library.com/images/default-user-icon/" +
-    "default-user-icon-28.jpg")
+    "https://icon-library.com/images/default-user-icon/" + "default-user-icon-28.jpg"
+)
 
 DEFAULT_HEADER_IMAGE_URL = (
-    "https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?ixlib=" +
-    "rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=for" +
-    "mat&fit=crop&w=2070&q=80")
+    "https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?ixlib="
+    + "rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=for"
+    + "mat&fit=crop&w=2070&q=80"
+)
 
 
 class Follow(db.Model):
     """Connection of a follower <-> followed_user."""
 
-    __tablename__ = 'follows'
+    __tablename__ = "follows"
 
     user_being_followed_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id', ondelete="cascade"),
+        db.ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
     )
 
     user_following_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id', ondelete="cascade"),
+        db.ForeignKey("users.id", ondelete="CASCADE"),
         primary_key=True,
     )
 
@@ -39,7 +40,7 @@ class Follow(db.Model):
 class User(db.Model):
     """User in the system."""
 
-    __tablename__ = 'users'
+    __tablename__ = "users"
 
     id = db.Column(
         db.Integer,
@@ -83,11 +84,11 @@ class User(db.Model):
     )
 
     password = db.Column(
-        db.String(100),
+        db.String(72),
         nullable=False,
     )
 
-    messages = db.relationship('Message', backref="user")
+    messages = db.relationship("Message", backref="user")
 
     followers = db.relationship(
         "User",
@@ -107,7 +108,7 @@ class User(db.Model):
         Hashes password and adds user to session.
         """
 
-        hashed_pwd = bcrypt.generate_password_hash(password).decode('UTF-8')
+        hashed_pwd = bcrypt.generate_password_hash(password).decode("UTF-8")
 
         user = User(
             username=username,
@@ -116,7 +117,7 @@ class User(db.Model):
             image_url=image_url,
         )
 
-        db.session.add(user)
+        db.session.add(user)  #! Commit in route
         return user
 
     @classmethod
@@ -143,22 +144,20 @@ class User(db.Model):
     def is_followed_by(self, other_user):
         """Is this user followed by `other_user`?"""
 
-        found_user_list = [
-            user for user in self.followers if user == other_user]
+        found_user_list = [user for user in self.followers if user == other_user]
         return len(found_user_list) == 1
 
     def is_following(self, other_user):
-        """Is this user following `other_use`?"""
+        """Is this user following `other_user`?"""
 
-        found_user_list = [
-            user for user in self.following if user == other_user]
+        found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
 
 
 class Message(db.Model):
     """An individual message ("warble")."""
 
-    __tablename__ = 'messages'
+    __tablename__ = "messages"
 
     id = db.Column(
         db.Integer,
@@ -178,7 +177,7 @@ class Message(db.Model):
 
     user_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id', ondelete='CASCADE'),
+        db.ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
 
