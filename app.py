@@ -281,7 +281,7 @@ def profile():
                 g.user.edit_user(**data)
                 db.session.commit()
             except IntegrityError:
-                flash("Username already taken", "danger")
+                flash("Username or email already in use", "danger")
                 return render_template("users/edit.html", form=form)
 
         return redirect(f"/users/{g.user.id}")
