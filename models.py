@@ -82,7 +82,7 @@ class User(db.Model):
     location = db.Column(
         db.String(30),
         nullable=False,
-        default="",
+        default=DEFAULT_LOCATION,
     )
 
     password = db.Column(
@@ -199,6 +199,7 @@ class Message(db.Model):
         nullable=False,
     )
 
+
 class Likes_Messages(db.Model):
     """Connection of a message_likes <-> user_likes."""
 
@@ -216,6 +217,7 @@ class Likes_Messages(db.Model):
         primary_key=True,
     )
 
+
 def connect_db(app):
     """Connect this database to provided Flask app.
 
@@ -225,4 +227,3 @@ def connect_db(app):
     app.app_context().push()
     db.app = app
     db.init_app(app)
-
