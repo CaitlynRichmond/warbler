@@ -54,9 +54,10 @@ class UserModelTestCase(TestCase):
     def test_user_model(self):
         u1 = User.query.get(self.u1_id)
 
-        # User should have no messages & no followers
+        # User should have no messages & no followers, no liked messages
         self.assertEqual(len(u1.messages), 0)
         self.assertEqual(len(u1.followers), 0)
+        self.assertEqual(len(u1.likes), 0)
 
     #####################################################################
     # Following/Followers Tests
@@ -173,9 +174,9 @@ class UserModelTestCase(TestCase):
         self.assertEqual(User.authenticate("u1", "password"), u1)
 
     def test_invalid_username_authentication(self):
-        """Test invalidvalid username authentication"""
+        """Test invalid username authentication"""
         self.assertFalse(User.authenticate("u4", "password"))
 
     def test_invalid_password_authentication(self):
-        """Test invalidvalid password authentication"""
+        """Test invalid  password authentication"""
         self.assertFalse(User.authenticate("u4", "badpassword"))

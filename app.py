@@ -1,7 +1,15 @@
 import os
 from dotenv import load_dotenv
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import (
+    Flask,
+    render_template,
+    request,
+    flash,
+    redirect,
+    session,
+    g,
+)
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
@@ -347,12 +355,16 @@ def delete_message(message_id):
     Check that this message was written by the current user.
     Redirect to user page on success.
     """
+    msg = Message.query.get_or_404(message_id)
 
-    if not g.user or not g.csrf_form.validate_on_submit():
+    if (
+        not g.user
+        or g.user.id != msg.user_id
+        or not g.csrf_form.validate_on_submit()
+    ):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    msg = Message.query.get_or_404(message_id)
     db.session.delete(msg)
     db.session.commit()
 
@@ -366,12 +378,15 @@ def delete_message(message_id):
 @app.post("/messages/<int:msg_id>/like")
 def toggle_likes(msg_id):
     """Add/Remove a like message to user"""
+    msg = Message.query.get_or_404(msg_id)
 
-    if not g.user or not g.csrf_form.validate_on_submit():
+    if (
+        not g.user
+        or g.user.id == msg.user_id
+        or not g.csrf_form.validate_on_submit()
+    ):
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
-    msg = Message.query.get_or_404(msg_id)
 
     if msg not in g.user.likes:
         g.user.likes.append(msg)
