@@ -357,11 +357,7 @@ def delete_message(message_id):
     """
     msg = Message.query.get_or_404(message_id)
 
-    if (
-        not g.user
-        or g.user.id != msg.user_id
-        or not g.csrf_form.validate_on_submit()
-    ):
+    if not g.user or g.user.id != msg.user_id or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -380,11 +376,7 @@ def toggle_likes(msg_id):
     """Add/Remove a like message to user"""
     msg = Message.query.get_or_404(msg_id)
 
-    if (
-        not g.user
-        or g.user.id == msg.user_id
-        or not g.csrf_form.validate_on_submit()
-    ):
+    if not g.user or g.user.id == msg.user_id or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 

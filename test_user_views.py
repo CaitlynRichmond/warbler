@@ -57,7 +57,105 @@ class UserBaseViewTestCase(TestCase):
         self.m1_id = m1.id
 
 
+class UserShowHomeTestCase(UserBaseViewTestCase):
+    """Show Homepage Test Cases"""
+
+    def test_get_anon_hompage(self):
+        """Show anon-homepage if not logged in"""
+
+        with app.test_client() as client:
+            resp = client.get("/")
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("This comment is for testing the home-anon.html", html)
+
+    def test_get_logged_in_hompage(self):
+        """Show homepage with warbles if logged in"""
+
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            resp = c.get("/")
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("This comment is for testing the home.html", html)
+
+
+class UserShowLoginAndSignupForms(UserBaseViewTestCase):
+    """Show Signup and Login Pages Tests"""
+
+    def test_logged_in_redirect_to_hompage(self):
+        """Redirect to homepage if logged in and access /login"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            resp = c.get("/login", follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("This comment is for testing the home.html", html)
+
+    def test_get_login_page(self):
+        """Redirect to homepage if logged in and and try to access /login"""
+        with app.test_client() as c:
+            resp = c.get("/login")
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(
+            "This comment is for testing showing /login.html page",
+            html,
+        )
+
+    def test_get_signup_page(self):
+        """display signup page if logged out"""
+        with app.test_client() as c:
+            resp = c.get("/signup")
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(
+            "This comment is for testing showing /signup.html page",
+            html,
+        )
+
+    def test_logged_in_redirect_signup_page(self):
+        """redirect from signup page if logged in"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+            resp = c.get("/signup", follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(
+            "This comment is for testing the home.html",
+            html,
+        )
+
+
+class UserLogoutViewtestCase(UserBaseViewTestCase):
+    """Logout View Test Cases"""
+
+    def test_logout_route(self):
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+            resp = c.post("/logout", follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertIn("Logged out, Going so soon :(", html)
+            self.assertEqual(sess[CURR_USER_KEY], None)
+
+
 class UserShowLikeViewTestCase(UserBaseViewTestCase):
+    """Show Likes Test Cases"""
+
     def test_show_likes(self):
         """Show likes of a user when logged in"""
         m2 = Message(text="m2-text", user_id=self.u1_id)
