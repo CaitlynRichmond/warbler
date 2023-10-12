@@ -9,8 +9,7 @@ bcrypt = Bcrypt()
 db = SQLAlchemy()
 
 DEFAULT_IMAGE_URL = (
-    "https://icon-library.com/images/default-user-icon/"
-    + "default-user-icon-28.jpg"
+    "https://icon-library.com/images/default-user-icon/" + "default-user-icon-28.jpg"
 )
 
 DEFAULT_HEADER_IMAGE_URL = (
@@ -99,6 +98,12 @@ class User(db.Model):
         backref="following",
     )
 
+    likes = db.relationship(
+        "Message",
+        secondary="likes_messages",
+        backref="likes",
+    )
+
     def __repr__(self):
         return f"<User #{self.id}: {self.username}, {self.email}>"
 
@@ -145,17 +150,13 @@ class User(db.Model):
     def is_followed_by(self, other_user):
         """Is this user followed by `other_user`?"""
 
-        found_user_list = [
-            user for user in self.followers if user == other_user
-        ]
+        found_user_list = [user for user in self.followers if user == other_user]
         return len(found_user_list) == 1
 
     def is_following(self, other_user):
         """Is this user following `other_user`?"""
 
-        found_user_list = [
-            user for user in self.following if user == other_user
-        ]
+        found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
 
     def edit_user(self, username, email, image_url, header_image_url, bio):
@@ -166,6 +167,7 @@ class User(db.Model):
         self.image_url = image_url or DEFAULT_IMAGE_URL
         self.header_image_url = header_image_url or DEFAULT_HEADER_IMAGE_URL
         self.bio = bio
+
 
 class Message(db.Model):
     """An individual message ("warble")."""
@@ -204,3 +206,21 @@ def connect_db(app):
     app.app_context().push()
     db.app = app
     db.init_app(app)
+
+
+class Likes_Messages(db.Model):
+    """Connection of a message_likes <-> user_likes."""
+
+    __tablename__ = "likes_messages"
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    message_id = db.Column(
+        db.Integer,
+        db.ForeignKey("messages.id", ondelete="CASCADE"),
+        primary_key=True,
+    )

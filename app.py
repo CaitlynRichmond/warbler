@@ -22,8 +22,9 @@ app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
 app.config["SQLALCHEMY_ECHO"] = False
-app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = True
+app.config["DEBUG_TB_INTERCEPT_REDIRECTS"] = False
 app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
+
 toolbar = DebugToolbarExtension(app)
 
 connect_db(app)
@@ -280,12 +281,19 @@ def profile():
                 }
                 g.user.edit_user(**data)
                 db.session.commit()
+
+                flash("Updated Profile", "success")
+                return redirect(f"/users/{g.user.id}")
+
             except IntegrityError:
                 flash("Username or email already in use", "danger")
                 return render_template("users/edit.html", form=form)
-        #Flash message when authentication is false
-        return redirect(f"/users/{g.user.id}")
+
+        else:
+            flash("Invalid password", "danger")
+            return render_template("users/edit.html", form=form)
     else:
+        flash("Access unauthorized.", "danger")
         return render_template("users/edit.html", form=form)
 
 
@@ -372,6 +380,32 @@ def delete_message(message_id):
         db.session.commit()
 
         return redirect(f"/users/{g.user.id}")
+    else:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+
+@app.post("/messages/<int:msg_id>/like")
+def likes(msg_id):
+    """Add a like message to user"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    form = g.csrf_form
+
+    if form.validate_on_submit():
+        msg = Message.query.get_or_404(msg_id)
+
+        if msg not in g.user.likes:
+            g.user.likes.append(msg)
+        else:
+            g.user.likes.pop(msg)
+        db.session.commit()
+
+        return redirect(f"/users/{g.user.id}/likes")
+
     else:
         flash("Access unauthorized.", "danger")
         return redirect("/")
