@@ -45,11 +45,8 @@
             {% if g.user.id != message.user_id %}
             <form class="d-inline" action="/messages/{{ message.id }}/like" method="POST">
               {{ g.csrf_form.hidden_tag() }}
-              {% if message in g.user.likes %}
-              <button type="submit" class="btn btn-link"><i class="bi bi-hand-thumbs-down-fill"></i></button>
-              {% else %}
-              <button type="submit" class="btn btn-link"><i class="bi bi-hand-thumbs-down"></i></button>
-              {% endif %}
+              <button type="submit" class="btn btn-link"><i
+                  class="bi bi-hand-thumbs-down{% if message in g.user.likes %}-fill{% endif %}"></i></button>
             </form>
             {% endif %}
           </span>

@@ -34,6 +34,7 @@ class UserAddForm(FlaskForm):
         "(Optional) Image URL", validators=[Optional(), URL(), Length(max=255)]
     )
 
+
 class UserEditForm(FlaskForm):
     """Form for editting users."""
 
@@ -47,12 +48,18 @@ class UserEditForm(FlaskForm):
         validators=[InputRequired(), Email(), Length(max=50)],
     )
 
+    location = StringField(
+        "(Optional) Location",
+        validators=[Optional(), Length(max=30)],
+    )
+
     image_url = StringField(
         "(Optional) Image URL", validators=[Optional(), URL(), Length(max=255)]
     )
 
     header_image_url = StringField(
-        "(Optional) Header Image URL", validators=[Optional(), URL(), Length(max=255)]
+        "(Optional) Header Image URL",
+        validators=[Optional(), URL(), Length(max=255)],
     )
 
     bio = StringField(

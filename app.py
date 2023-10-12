@@ -207,8 +207,6 @@ def show_followers(user_id):
     return render_template("users/followers.html", user=user)
 
 
-
-
 @app.post("/users/follow/<int:follow_id>")
 def start_following(follow_id):
     """Add a follow for the currently-logged-in user.
@@ -216,22 +214,15 @@ def start_following(follow_id):
     Redirect to following page for the current for the current user.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
+    followed_user = User.query.get_or_404(follow_id)
+    g.user.following.append(followed_user)
+    db.session.commit()
 
-    if form.validate_on_submit():
-        followed_user = User.query.get_or_404(follow_id)
-        g.user.following.append(followed_user)
-        db.session.commit()
-
-        return redirect(f"/users/{g.user.id}/following")
-
-    else:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+    return redirect(request.referrer)
 
 
 @app.post("/users/stop-following/<int:follow_id>")
@@ -241,21 +232,15 @@ def stop_following(follow_id):
     Redirect to following page for the current for the current user.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
+    followed_user = User.query.get_or_404(follow_id)
+    g.user.following.remove(followed_user)
+    db.session.commit()
 
-    if form.validate_on_submit():
-        followed_user = User.query.get_or_404(follow_id)
-        g.user.following.remove(followed_user)
-        db.session.commit()
-
-        return redirect(f"/users/{g.user.id}/following")
-    else:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+    return redirect(request.referrer)
 
 
 @app.route("/users/profile", methods=["GET", "POST"])
@@ -295,7 +280,6 @@ def profile():
             flash("Invalid password", "danger")
             return render_template("users/edit.html", form=form)
     else:
-        flash("Access unauthorized.", "danger")
         return render_template("users/edit.html", form=form)
 
 
@@ -306,21 +290,15 @@ def delete_user():
     Redirect to signup page.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
+    do_logout()
+    User.query.filter_by(id=g.user.id).delete()
+    db.session.commit()
 
-    if form.validate_on_submit():
-        do_logout()
-        User.query.filter_by(id=g.user.id).delete()
-        db.session.commit()
-
-        return redirect("/signup")
-    else:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+    return redirect("/signup")
 
 
 ##############################################################################
@@ -370,53 +348,43 @@ def delete_message(message_id):
     Redirect to user page on success.
     """
 
-    if not g.user:
+    if not g.user or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
+    msg = Message.query.get_or_404(message_id)
+    db.session.delete(msg)
+    db.session.commit()
 
-    if form.validate_on_submit():
-        msg = Message.query.get_or_404(message_id)
-        db.session.delete(msg)
-        db.session.commit()
+    return redirect(f"/users/{g.user.id}")
 
-        return redirect(f"/users/{g.user.id}")
-    else:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
 
 ##############################################################################
 # Likes Pages
 
+
 @app.post("/messages/<int:msg_id>/like")
-def likes(msg_id):
-    """Add a like message to user"""
+def toggle_likes(msg_id):
+    """Add/Remove a like message to user"""
 
-    if not g.user:
+    if not g.user or not g.csrf_form.validate_on_submit():
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
-    form = g.csrf_form
+    msg = Message.query.get_or_404(msg_id)
 
-    if form.validate_on_submit():
-        msg = Message.query.get_or_404(msg_id)
-
-        if msg not in g.user.likes:
-            g.user.likes.append(msg)
-        else:
-            g.user.likes.remove(msg)
-        db.session.commit()
-
-        return redirect(f"/users/{g.user.id}/likes")
-
+    if msg not in g.user.likes:
+        g.user.likes.append(msg)
     else:
-        flash("Access unauthorized.", "danger")
-        return redirect("/")
+        g.user.likes.remove(msg)
+    db.session.commit()
+
+    return redirect(request.referrer)
+
 
 @app.get("/users/<user_id>/likes")
 def show_likes(user_id):
-    """Show list of people this user is following."""
+    """Show all messages this user likes"""
 
     if not g.user:
         flash("Access unauthorized.", "danger")
@@ -438,9 +406,6 @@ def homepage():
     - logged in: 100 most recent messages of self & followed_users
     """
     if g.user:
-        # If we're logged in as user
-        # we want messages to be the users messages and the user they are following
-        # messages
         show_tweets_from_users_ids = [
             followed_user.id for followed_user in g.user.following
         ] + [g.user.id]
