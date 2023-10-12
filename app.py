@@ -207,6 +207,8 @@ def show_followers(user_id):
     return render_template("users/followers.html", user=user)
 
 
+
+
 @app.post("/users/follow/<int:follow_id>")
 def start_following(follow_id):
     """Add a follow for the currently-logged-in user.
@@ -384,6 +386,8 @@ def delete_message(message_id):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
+##############################################################################
+# Likes Pages
 
 @app.post("/messages/<int:msg_id>/like")
 def likes(msg_id):
@@ -401,7 +405,7 @@ def likes(msg_id):
         if msg not in g.user.likes:
             g.user.likes.append(msg)
         else:
-            g.user.likes.pop(msg)
+            g.user.likes.remove(msg)
         db.session.commit()
 
         return redirect(f"/users/{g.user.id}/likes")
@@ -409,6 +413,17 @@ def likes(msg_id):
     else:
         flash("Access unauthorized.", "danger")
         return redirect("/")
+
+@app.get("/users/<user_id>/likes")
+def show_likes(user_id):
+    """Show list of people this user is following."""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    user = User.query.get_or_404(user_id)
+    return render_template("users/likes.html", user=user)
 
 
 ##############################################################################
