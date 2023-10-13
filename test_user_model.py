@@ -115,6 +115,7 @@ class UserModelTestCase(TestCase):
         self.assertEqual(u3.image_url, DEFAULT_IMAGE_URL)
         self.assertEqual(u3.header_image_url, DEFAULT_HEADER_IMAGE_URL)
         self.assertEqual(u3.location, DEFAULT_LOCATION)
+        self.assertNotEqual(u3.password, "password")
 
     #############################
     # Signup Uniqueness Tests

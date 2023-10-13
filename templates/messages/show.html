@@ -46,7 +46,7 @@
             <form class="d-inline" action="/messages/{{ message.id }}/like" method="POST">
               {{ g.csrf_form.hidden_tag() }}
               <button type="submit" class="btn btn-link"><i
-                  class="bi bi-hand-thumbs-down{% if message in g.user.likes %}-fill{% endif %}"></i></button>
+                  class="bi bi-emoji-heart-eyes{% if message in g.user.likes %}-fill{% endif %}"></i></button>
             </form>
             {% endif %}
           </span>

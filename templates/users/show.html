@@ -1,5 +1,6 @@
 {% extends 'users/detail.html' %}
 {% block user_details %}
+<!--This comment for testing of user/show.html-->
 <div class="col-sm-6">
   <ul class="list-group" id="messages">
 
@@ -21,8 +22,10 @@
         <form class="d-inline" action="/messages/{{ message.id }}/like" method="POST">
           {{ g.csrf_form.hidden_tag() }}
 
-          <button type="submit" class="btn btn-link"><i
-              class="bi bi-hand-thumbs-down{% if message in g.user.likes %}-fill{% endif %}"></i></button>
+          <button type="submit" class="btn btn-link">
+            <i class="bi bi-emoji-heart-eyes{% if message in g.user.likes %}-fill{% endif %}">
+            </i>
+          </button>
         </form>
         {% endif %}
         <p>{{ message.text }}</p>

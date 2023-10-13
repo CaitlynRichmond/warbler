@@ -57,13 +57,12 @@
             <p>{{ msg.text }}</p>
           </div>
         </a>
-        <!--TODO: Put the conditional logic in the class -->
         {% if g.user.id != msg.user_id %}
         <form action="/messages/{{ msg.id }}/like" method="POST">
           {{ g.csrf_form.hidden_tag() }}
 
           <button type="submit" class="btn btn-link"><i
-              class="bi bi-hand-thumbs-down{% if msg in g.user.likes %}-fill{% endif %}"></i></button>
+              class="bi bi-emoji-heart-eyes{% if msg in g.user.likes %}-fill{% endif %}"></i></button>
         </form>
         {% endif %}
       </li>

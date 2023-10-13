@@ -17,7 +17,9 @@
       </a>
       <form action="/messages/{{ msg.id }}/like" method="POST">
         {{ g.csrf_form.hidden_tag() }}
-        <button type="submit" class="btn btn-link"><i class="bi bi-hand-thumbs-down-fill"></i></button>
+        <button type="submit" class="btn btn-link">
+          <i class="bi bi-emoji-heart-eyes-fill"></i>
+        </button>
       </form>
     </li>
     {% endfor %}

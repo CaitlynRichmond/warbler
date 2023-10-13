@@ -56,6 +56,9 @@ class UserBaseViewTestCase(TestCase):
         self.u2_id = u2.id
         self.m1_id = m1.id
 
+    def tearDown(self):
+        db.session.rollback()
+
 
 class UserShowHomeTestCase(UserBaseViewTestCase):
     """Show Homepage Test Cases"""
@@ -84,7 +87,7 @@ class UserShowHomeTestCase(UserBaseViewTestCase):
         self.assertIn("This comment is for testing the home.html", html)
 
 
-class UserShowLoginAndSignupForms(UserBaseViewTestCase):
+class UserShowLoginAndSignupFormsTestCase(UserBaseViewTestCase):
     """Show Signup and Login Pages Tests"""
 
     def test_logged_in_redirect_to_homepage(self):
@@ -232,9 +235,239 @@ class UserShowLikeViewTestCase(UserBaseViewTestCase):
             )
 
     def test_show_likes_bad_not_loggedin(self):
-        """Can't see a users likes if not logged in"""
+        """Can't see a user's likes if not logged in"""
+
         with app.test_client() as c:
             resp = c.get(f"/users/{self.u2_id}/likes", follow_redirects=True)
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "Access unauthorized.",
+                html,
+            )
+
+
+class UserShowUserViewTestCase(UserBaseViewTestCase):
+    """Testing show_user view function"""
+
+    def test_show_user_profile_good(self):
+        """Can view other user profile"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.get(f"/users/{self.u1_id}")
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "<!--This comment for testing of user/show.html-->",
+                html,
+            )
+
+            m1 = Message.query.get(self.m1_id)
+
+            self.assertIn(f"{m1.text}", html)
+
+    def test_show_user_bad_not_loggedin(self):
+        """Can't see a user's profile if not logged in"""
+
+        with app.test_client() as c:
+            resp = c.get(f"/users/{self.u2_id}", follow_redirects=True)
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "Access unauthorized.",
+                html,
+            )
+
+
+class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
+    """Testing view functions related to following and follwers
+    stop_following
+    start_following
+    show_followers
+    show_following
+    """
+
+    def test_stop_following_bad_not_loggedin(self):
+        """Can't stop following someone if not logged in"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                f"/users/stop-following/{self.u2_id}", follow_redirects=True
+            )
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "Access unauthorized.",
+                html,
+            )
+
+    def test_start_following_bad_not_loggedin(self):
+        """Can't start following if not logged in"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                f"/users/follow/{self.u2_id}", follow_redirects=True
+            )
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "Access unauthorized.",
+                html,
+            )
+
+    def test_all_for_404_when_user_does_not_exist(self):
+        """Test 404 when user id to follow/stop following/show
+        followers/show following does not exist"""
+
+        # Start Follow
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(f"/users/follow/0")
+            self.assertEqual(resp.status_code, 404)
+
+        # Stop following
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(f"/users/stop-following/0")
+            self.assertEqual(resp.status_code, 404)
+
+        # Show Followers
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.get(f"/users/0/followers")
+            self.assertEqual(resp.status_code, 404)
+
+        # Show Following
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.get(f"/users/0/following")
+            self.assertEqual(resp.status_code, 404)
+
+    def test_start_following_good(self):
+        """Test start_following good case"""
+
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(f"/users/follow/{self.u1_id}")
+
+            self.assertEqual(resp.status_code, 302)
+
+            u2 = User.query.get(self.u2_id)
+            u1 = User.query.get(self.u1_id)
+
+            self.assertIn(u1, u2.following)
+
+    def test_start_stop_following_good(self):
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(f"/users/follow/{self.u1_id}")
+
+            self.assertEqual(resp.status_code, 302)
+
+            u2 = User.query.get(self.u2_id)
+            u1 = User.query.get(self.u1_id)
+
+            self.assertIn(u1, u2.following)
+
+            resp = c.post(f"/users/stop-following/{self.u1_id}")
+
+            u2 = User.query.get(self.u2_id)
+            u1 = User.query.get(self.u1_id)
+
+            self.assertNotIn(u1, u2.following)
+
+    def test_stop_following_bad_user_not_following(self):
+        """Test stop following bad case where they were not following the user before"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            with self.assertRaises(ValueError):
+                c.post(f"/users/stop-following/{self.u1_id}")
+
+    def test_show_following_good(self):
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(f"/users/{self.u1_id}/following")
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertIn(
+                "This comment for testing of routes using following.html",
+                html,
+            )
+
+    def test_show_following_bad_not_loggedin(self):
+        """Can't see who a user follows if not logged in"""
+
+        with app.test_client() as c:
+            resp = c.get(
+                f"/users/{self.u2_id}/following", follow_redirects=True
+            )
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "Access unauthorized.",
+                html,
+            )
+
+    def test_show_followers_good(self):
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(f"/users/{self.u1_id}/followers")
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 302)
+            self.assertIn(
+                "This comment for testing of routes using following.html",
+                html,
+            )
+
+    def test_show_followers_bad_not_loggedin(self):
+        """Can't see who follows a user when not logged in"""
+
+        with app.test_client() as c:
+            resp = c.get(
+                f"/users/{self.u2_id}/followers", follow_redirects=True
+            )
 
             self.assertEqual(resp.status_code, 200)
 
