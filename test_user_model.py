@@ -132,6 +132,47 @@ class UserModelTestCase(TestCase):
             db.session.commit()
 
     #############################
+    # User Model Edit Tests
+    def test_edit_user_successful(self):
+        u1 = User.query.get(self.u1_id)
+
+        u1.edit_user(
+            "edit_test_name",
+            "edit_test_email",
+            "edit_test_location",
+            "edit_test_image",
+            "edit_test_header_image_url",
+            "edit_test_bio",
+        )
+
+        db.session.commit()
+
+        edited_user = User.query.get(self.u1_id)
+        self.assertEquals("edit_test_name", edited_user.username)
+        self.assertEquals("edit_test_email", edited_user.email)
+        self.assertEquals("edit_test_location", edited_user.location)
+        self.assertEquals("edit_test_image", edited_user.image_url)
+        self.assertEquals(
+            "edit_test_header_image_url", edited_user.header_image_url
+        )
+        self.assertEquals("edit_test_bio", edited_user.bio)
+
+    def test_edit_user_unsuccessful(self):
+        """Tests with non-unique input for username"""
+        u1 = User.query.get(self.u1_id)
+
+        with self.assertRaises(IntegrityError):
+            u1.edit_user(
+                "u2",
+                "edit_test_email",
+                "edit_test_location",
+                "edit_test_image",
+                "edit_test_header_image_url",
+                "edit_test_bio",
+            )
+            db.session.commit()
+
+    #############################
     # Signup Lengths Tests
 
     def test_user_signup_too_username_input(self):
