@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
+<!--This comment is for testing showing /index.html page-->
 {% if users|length == 0 %}
 <h3>Sorry, no users found</h3>
 {% else %}
@@ -8,7 +9,7 @@
     <div class="row">
 
       {% for user in users %}
-
+    
       <div class="col-lg-4 col-md-6 col-12">
         <div class="card user-card">
           <div class="card-inner">

@@ -60,7 +60,7 @@ class UserBaseViewTestCase(TestCase):
 class UserShowHomeTestCase(UserBaseViewTestCase):
     """Show Homepage Test Cases"""
 
-    def test_get_anon_hompage(self):
+    def test_get_anon_homepage(self):
         """Show anon-homepage if not logged in"""
 
         with app.test_client() as client:
@@ -70,7 +70,7 @@ class UserShowHomeTestCase(UserBaseViewTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("This comment is for testing the home-anon.html", html)
 
-    def test_get_logged_in_hompage(self):
+    def test_get_logged_in_homepage(self):
         """Show homepage with warbles if logged in"""
 
         with app.test_client() as c:
@@ -87,7 +87,7 @@ class UserShowHomeTestCase(UserBaseViewTestCase):
 class UserShowLoginAndSignupForms(UserBaseViewTestCase):
     """Show Signup and Login Pages Tests"""
 
-    def test_logged_in_redirect_to_hompage(self):
+    def test_logged_in_redirect_to_homepage(self):
         """Redirect to homepage if logged in and access /login"""
         with app.test_client() as c:
             with c.session_transaction() as sess:
@@ -139,7 +139,7 @@ class UserShowLoginAndSignupForms(UserBaseViewTestCase):
         )
 
 
-class UserLogoutViewtestCase(UserBaseViewTestCase):
+class UserLogoutViewTestCase(UserBaseViewTestCase):
     """Logout View Test Cases"""
 
     def test_logout_route(self):
@@ -150,7 +150,58 @@ class UserLogoutViewtestCase(UserBaseViewTestCase):
             html = resp.get_data(as_text=True)
 
             self.assertIn("Logged out, Going so soon :(", html)
-            self.assertEqual(sess[CURR_USER_KEY], None)
+
+
+class GeneralUserViewTestCases(UserBaseViewTestCase):
+    """General view Test Cases"""
+
+    def test_list_users_all(self):
+        """Get page of existing users"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = c.get("/users", follow_redirects=True)
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(
+            "This comment is for testing showing /index.html page",
+            html,
+        )
+        self.assertIn("@u1", html)
+        self.assertIn("@u2", html)
+
+    def test_list_users_filter(self):
+        """Get page of filtered existing users"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u1_id
+
+        resp = c.get("/users?q=u2", follow_redirects=True)
+        html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(
+            "This comment is for testing showing /index.html page",
+            html,
+        )
+        self.assertNotIn("@u1", html)
+        self.assertIn("@u2", html)
+
+    def test_list_users_logged_out(self):
+        """Can't see a users if not logged in"""
+        with app.test_client() as c:
+            resp = c.get("/users", follow_redirects=True)
+
+            self.assertEqual(resp.status_code, 200)
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn(
+                "Access unauthorized.",
+                html,
+            )
 
 
 class UserShowLikeViewTestCase(UserBaseViewTestCase):
