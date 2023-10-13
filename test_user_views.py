@@ -8,7 +8,7 @@
 import os
 from unittest import TestCase
 
-from models import db, Message, User
+from models import db, Message, User, DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -101,6 +101,7 @@ class UserShowLoginAndSignupFormsTestCase(UserBaseViewTestCase):
 
         self.assertEqual(resp.status_code, 200)
         self.assertIn("This comment is for testing the home.html", html)
+        # TODO: add test for displaying correct information on page for user
 
     def test_get_login_page(self):
         """Redirect to homepage if logged in and and try to access /login"""
@@ -141,6 +142,8 @@ class UserShowLoginAndSignupFormsTestCase(UserBaseViewTestCase):
             html,
         )
 
+    # TODO: setup post test
+
 
 class UserLogoutViewTestCase(UserBaseViewTestCase):
     """Logout View Test Cases"""
@@ -152,6 +155,7 @@ class UserLogoutViewTestCase(UserBaseViewTestCase):
             resp = c.post("/logout", follow_redirects=True)
             html = resp.get_data(as_text=True)
 
+            # TODO: Check status code 200
             self.assertIn("Logged out, Going so soon :(", html)
 
 
@@ -193,18 +197,14 @@ class GeneralUserViewTestCases(UserBaseViewTestCase):
         self.assertIn("@u2", html)
 
     def test_list_users_logged_out(self):
-        """Can't see a users if not logged in"""
+        """Can't see users list if not logged in"""
         with app.test_client() as c:
             resp = c.get("/users", follow_redirects=True)
 
-            self.assertEqual(resp.status_code, 200)
-
             html = resp.get_data(as_text=True)
 
-            self.assertIn(
-                "Access unauthorized.",
-                html,
-            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
 
 
 class UserShowLikeViewTestCase(UserBaseViewTestCase):
@@ -249,6 +249,8 @@ class UserShowLikeViewTestCase(UserBaseViewTestCase):
                 html,
             )
 
+    # TODO: test for liking own message
+
 
 class UserShowUserViewTestCase(UserBaseViewTestCase):
     """Testing show_user view function"""
@@ -289,6 +291,8 @@ class UserShowUserViewTestCase(UserBaseViewTestCase):
                 html,
             )
 
+    # TODO: test user that doesnt exist
+
 
 class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
     """Testing view functions related to following and follwers
@@ -302,14 +306,11 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
         """Can't stop following someone if not logged in"""
 
         with app.test_client() as c:
-            resp = c.post(
-                f"/users/stop-following/{self.u2_id}", follow_redirects=True
-            )
-
-            self.assertEqual(resp.status_code, 200)
+            resp = c.post(f"/users/stop-following/{self.u2_id}", follow_redirects=True)
 
             html = resp.get_data(as_text=True)
 
+            self.assertEqual(resp.status_code, 200)
             self.assertIn(
                 "Access unauthorized.",
                 html,
@@ -319,14 +320,11 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
         """Can't start following if not logged in"""
 
         with app.test_client() as c:
-            resp = c.post(
-                f"/users/follow/{self.u2_id}", follow_redirects=True
-            )
-
-            self.assertEqual(resp.status_code, 200)
+            resp = c.post(f"/users/follow/{self.u2_id}", follow_redirects=True)
 
             html = resp.get_data(as_text=True)
 
+            self.assertEqual(resp.status_code, 200)
             self.assertIn(
                 "Access unauthorized.",
                 html,
@@ -335,7 +333,7 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
     def test_all_for_404_when_user_does_not_exist(self):
         """Test 404 when user id to follow/stop following/show
         followers/show following does not exist"""
-
+        # TODO: break up test
         # Start Follow
         with app.test_client() as c:
             with c.session_transaction() as sess:
@@ -405,6 +403,7 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
 
             self.assertNotIn(u1, u2.following)
 
+    # TODO: Clear up definition
     def test_stop_following_bad_user_not_following(self):
         """Test stop following bad case where they were not following the user before"""
         with app.test_client() as c:
@@ -415,27 +414,27 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
                 c.post(f"/users/stop-following/{self.u1_id}")
 
     def test_show_following_good(self):
+        # TODO: Docstring
         with app.test_client() as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u2_id
 
-            resp = c.post(f"/users/{self.u1_id}/following")
+            resp = c.get(f"/users/{self.u1_id}/following")
 
             html = resp.get_data(as_text=True)
 
-            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(resp.status_code, 200)
             self.assertIn(
                 "This comment for testing of routes using following.html",
                 html,
             )
+            # TODO: check for u1 following names
 
     def test_show_following_bad_not_loggedin(self):
         """Can't see who a user follows if not logged in"""
 
         with app.test_client() as c:
-            resp = c.get(
-                f"/users/{self.u2_id}/following", follow_redirects=True
-            )
+            resp = c.get(f"/users/{self.u2_id}/following", follow_redirects=True)
 
             self.assertEqual(resp.status_code, 200)
 
@@ -447,27 +446,27 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
             )
 
     def test_show_followers_good(self):
+        # TODO: docstring
         with app.test_client() as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u2_id
 
-            resp = c.post(f"/users/{self.u1_id}/followers")
+            resp = c.get(f"/users/{self.u1_id}/followers")
 
             html = resp.get_data(as_text=True)
 
-            self.assertEqual(resp.status_code, 302)
+            self.assertEqual(resp.status_code, 200)
             self.assertIn(
-                "This comment for testing of routes using following.html",
+                "This comment for testing of routes using followers.html",
                 html,
             )
+            # TODO: check for u1 followers names
 
     def test_show_followers_bad_not_loggedin(self):
         """Can't see who follows a user when not logged in"""
 
         with app.test_client() as c:
-            resp = c.get(
-                f"/users/{self.u2_id}/followers", follow_redirects=True
-            )
+            resp = c.get(f"/users/{self.u2_id}/followers", follow_redirects=True)
 
             self.assertEqual(resp.status_code, 200)
 
@@ -477,3 +476,90 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
                 "Access unauthorized.",
                 html,
             )
+
+
+class UserDeleteAndEditRouteViewTestCases(UserBaseViewTestCase):
+    """Delete and Edit Route Tests"""
+
+    #############################################################
+    # Delete tests
+    def test_user_delete_logged_in(self):
+        # TODO: docstrings
+        with app.test_client() as c:
+            u2 = User.query.get(self.u2_id)
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post("/users/delete", follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+
+        users = User.query.all()
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("User successfully deleted", html)
+        self.assertNotIn(u2, users)
+
+    def test_user_delete_not_logged_in(self):
+        # TODO: docstrings
+        with app.test_client() as c:
+            resp = c.post("/users/delete", follow_redirects=True)
+
+            html = resp.get_data(as_text=True)
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("Access unauthorized.", html)
+
+    # TODO: cant delete someone else
+
+    # #############################################################
+    # # Edit tests
+
+    # def test_user_edit_profile(self):
+    #     with app.test_client() as c:
+    #         with c.session_transaction() as sess:
+    #             sess[CURR_USER_KEY] = self.u2_id
+
+    #             u2 = User.query.get(self.u2_id)
+    #             resp = c.post(
+    #                 "/users/profile",
+    #                 data={
+    #                     "username": "testusername",
+    #                     "email": "newemail@test.com",
+    #                     "location": "test location",
+    #                     "password": u2.password,
+    #                 },
+    #                 follow_redirects=True,
+    #             )
+
+    #         testuser = User.query.get(self.u2_id)
+    #         users = User.query.all()
+
+    #     self.assertEqual(resp.status_code, 200)
+    #     self.assertIn(testuser, users)
+    #     self.assertNotEqual(u2, testuser)
+
+    # def test_user_edit_profile_bad(self):
+    #     with app.test_client() as c:
+    #         with c.session_transaction() as sess:
+    #             sess[CURR_USER_KEY] = self.u2_id
+
+    #             resp = c.post(
+    #                 "/users/profile",
+    #                 data={
+    #                     "username": "testusername",
+    #                     "email": "newemail@test.com",
+    #                     "location": "test location",
+    #                     "password": "wrongpassword",
+    #                 },
+    #                 follow_redirects=True,
+    #             )
+    #             db.session.commit()
+
+    #         html = resp.get_data(as_text=True)
+    #         testuser = User.query.get(self.u2_id)
+    #         users = User.query.all()
+
+    #     self.assertEqual(resp.status_code, 200)
+    #     self.assertIn(testuser, users)
+    #     self.assertIn("Invalid password", html)

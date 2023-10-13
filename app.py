@@ -306,6 +306,7 @@ def delete_user():
     User.query.filter_by(id=g.user.id).delete()
     db.session.commit()
 
+    flash("User successfully deleted", "success")
     return redirect("/signup")
 
 
