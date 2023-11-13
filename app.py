@@ -101,7 +101,8 @@ def signup():
             db.session.commit()
 
         except IntegrityError:
-            flash("Username already taken", "danger")
+            db.session.rollback()
+            flash("Username or email already in use", "danger")
             return render_template("users/signup.html", form=form)
 
         do_login(user)
@@ -143,7 +144,7 @@ def logout():
 
     form = g.csrf_form
 
-    if form.validate_on_submit():
+    if g.user and form.validate_on_submit():
         do_logout()
         flash("Logged out, Going so soon :(", "success")
         return redirect("/login")
@@ -279,8 +280,8 @@ def profile():
 
                 flash("Updated Profile", "success")
                 return redirect(f"/users/{g.user.id}")
-
             except IntegrityError:
+                db.session.rollback()
                 flash("Username or email already in use", "danger")
                 return render_template("users/edit.html", form=form)
 
@@ -358,7 +359,11 @@ def delete_message(message_id):
     """
     msg = Message.query.get_or_404(message_id)
 
-    if not g.user or g.user.id != msg.user_id or not g.csrf_form.validate_on_submit():
+    if (
+        not g.user
+        or g.user.id != msg.user_id
+        or not g.csrf_form.validate_on_submit()
+    ):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 
@@ -377,7 +382,11 @@ def toggle_likes(msg_id):
     """Add/Remove a like message to user"""
     msg = Message.query.get_or_404(msg_id)
 
-    if not g.user or g.user.id == msg.user_id or not g.csrf_form.validate_on_submit():
+    if (
+        not g.user
+        or g.user.id == msg.user_id
+        or not g.csrf_form.validate_on_submit()
+    ):
         flash("Access unauthorized.", "danger")
         return redirect("/")
 

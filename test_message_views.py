@@ -122,7 +122,17 @@ class MessageShowViewTestCase(MessageBaseViewTestCase):
 
             self.assertEqual(resp.status_code, 404)
 
-    # TODO: test message if not logged in
+    def test_show_message_bad_logged_out(self):
+        """Messages cannot be seen when logged out"""
+
+        with app.test_client() as c:
+            resp = c.get(
+                f"/messages/{self.m1_id}",
+                follow_redirects=True,
+            )
+            html = resp.get_data(as_text=True)
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
 
 
 class MessageDeleteViewTestCase(MessageBaseViewTestCase):
@@ -136,7 +146,9 @@ class MessageDeleteViewTestCase(MessageBaseViewTestCase):
             resp = c.post(f"/messages/{self.m1_id}/delete")
             self.assertEqual(resp.status_code, 302)
 
-            check_delete = Message.query.filter_by(text="m1-text").one_or_none()
+            check_delete = Message.query.filter_by(
+                text="m1-text"
+            ).one_or_none()
             self.assertIsNone(check_delete)
 
     def test_delete_message_bad_message_id_does_not_exist(self):
@@ -206,7 +218,9 @@ class MessageToggleLikeViewTestCase(MessageBaseViewTestCase):
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
 
-            resp = c.post(f"/messages/{self.m1_id}/like", follow_redirects=True)
+            resp = c.post(
+                f"/messages/{self.m1_id}/like", follow_redirects=True
+            )
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)
@@ -215,7 +229,9 @@ class MessageToggleLikeViewTestCase(MessageBaseViewTestCase):
     def test_toggle_likes_bad_not_logged_in(self):
         """Tests failure to like message when not logged in"""
         with app.test_client() as c:
-            resp = c.post(f"/messages/{self.m1_id}/like", follow_redirects=True)
+            resp = c.post(
+                f"/messages/{self.m1_id}/like", follow_redirects=True
+            )
             html = resp.get_data(as_text=True)
 
             self.assertEqual(resp.status_code, 200)

@@ -8,7 +8,13 @@
 import os
 from unittest import TestCase
 
-from models import db, Message, User, DEFAULT_IMAGE_URL, DEFAULT_HEADER_IMAGE_URL
+from models import (
+    db,
+    Message,
+    User,
+    DEFAULT_IMAGE_URL,
+    DEFAULT_HEADER_IMAGE_URL,
+)
 
 # BEFORE we import our app, let's set an environmental variable
 # to use a different database for tests (we need to do this
@@ -98,10 +104,10 @@ class UserShowLoginAndSignupFormsTestCase(UserBaseViewTestCase):
 
             resp = c.get("/login", follow_redirects=True)
             html = resp.get_data(as_text=True)
-
+        u1 = User.query.get(self.u1_id)
         self.assertEqual(resp.status_code, 200)
         self.assertIn("This comment is for testing the home.html", html)
-        # TODO: add test for displaying correct information on page for user
+        self.assertIn(u1.username, html)
 
     def test_get_login_page(self):
         """Redirect to homepage if logged in and and try to access /login"""
@@ -142,21 +148,123 @@ class UserShowLoginAndSignupFormsTestCase(UserBaseViewTestCase):
             html,
         )
 
-    # TODO: setup post test
+    def test_login_success(self):
+        """tests successful new sign up"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                "/login",
+                data={
+                    "username": "u1",
+                    "password": "password",
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertIn("@u1", html)
+            self.assertIn("Hello, u1!", html)
+            self.assertEqual(resp.status_code, 200)
+
+    def test_login_bad_wrong_password(self):
+        """tests login with wrong password"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                "/login",
+                data={
+                    "username": "u1",
+                    "password": "bad_password",
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+            self.assertIn("Invalid credentials.", html)
+            self.assertEqual(resp.status_code, 200)
+
+    def test_login_bad_username_does_not_exist(self):
+        """tests login with made up username and password"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                "/login",
+                data={
+                    "username": "fake-name-I-do-not-exist",
+                    "password": "password",
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+            self.assertIn("Invalid credentials.", html)
+            self.assertEqual(resp.status_code, 200)
+
+    def test_sign_up_success_new_user(self):
+        """tests successful new sign up"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                "/signup",
+                data={
+                    "username": "sign-me-up",
+                    "email": "sign-up@email.com",
+                    "password": "password",
+                    "image_url": DEFAULT_IMAGE_URL,
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("@sign-me-up", html)
+
+    def test_sign_up_fail_new_user(self):
+        """Non unique user id results in failure"""
+
+        with app.test_client() as c:
+            resp = c.post(
+                "/signup",
+                data={
+                    "username": "sign-me-up",
+                    "email": "u1@email.com",
+                    "password": "password",
+                    "image_url": DEFAULT_IMAGE_URL,
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Username or email already in use", html)
 
 
 class UserLogoutViewTestCase(UserBaseViewTestCase):
     """Logout View Test Cases"""
 
     def test_logout_route(self):
+        """Test successful logout"""
+
         with app.test_client() as c:
             with c.session_transaction() as sess:
                 sess[CURR_USER_KEY] = self.u1_id
             resp = c.post("/logout", follow_redirects=True)
             html = resp.get_data(as_text=True)
 
-            # TODO: Check status code 200
+            self.assertEqual(resp.status_code, 200)
             self.assertIn("Logged out, Going so soon :(", html)
+
+    def test_logout_bad_not_logged_in(self):
+        """Cannot log out if not logged in"""
+        with app.test_client() as c:
+            resp = c.post("/logout", follow_redirects=True)
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Access unauthorized.", html)
 
 
 class GeneralUserViewTestCases(UserBaseViewTestCase):
@@ -306,7 +414,9 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
         """Can't stop following someone if not logged in"""
 
         with app.test_client() as c:
-            resp = c.post(f"/users/stop-following/{self.u2_id}", follow_redirects=True)
+            resp = c.post(
+                f"/users/stop-following/{self.u2_id}", follow_redirects=True
+            )
 
             html = resp.get_data(as_text=True)
 
@@ -320,7 +430,9 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
         """Can't start following if not logged in"""
 
         with app.test_client() as c:
-            resp = c.post(f"/users/follow/{self.u2_id}", follow_redirects=True)
+            resp = c.post(
+                f"/users/follow/{self.u2_id}", follow_redirects=True
+            )
 
             html = resp.get_data(as_text=True)
 
@@ -434,7 +546,9 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
         """Can't see who a user follows if not logged in"""
 
         with app.test_client() as c:
-            resp = c.get(f"/users/{self.u2_id}/following", follow_redirects=True)
+            resp = c.get(
+                f"/users/{self.u2_id}/following", follow_redirects=True
+            )
 
             self.assertEqual(resp.status_code, 200)
 
@@ -466,7 +580,9 @@ class UserShowUserFollowingAndFollowersViewTestCases(UserBaseViewTestCase):
         """Can't see who follows a user when not logged in"""
 
         with app.test_client() as c:
-            resp = c.get(f"/users/{self.u2_id}/followers", follow_redirects=True)
+            resp = c.get(
+                f"/users/{self.u2_id}/followers", follow_redirects=True
+            )
 
             self.assertEqual(resp.status_code, 200)
 
@@ -484,7 +600,7 @@ class UserDeleteAndEditRouteViewTestCases(UserBaseViewTestCase):
     #############################################################
     # Delete tests
     def test_user_delete_logged_in(self):
-        # TODO: docstrings
+        """Tests user can log out success case"""
         with app.test_client() as c:
             u2 = User.query.get(self.u2_id)
             with c.session_transaction() as sess:
@@ -501,7 +617,7 @@ class UserDeleteAndEditRouteViewTestCases(UserBaseViewTestCase):
         self.assertNotIn(u2, users)
 
     def test_user_delete_not_logged_in(self):
-        # TODO: docstrings
+        """Tests that a user can't be deleted if not logged in"""
         with app.test_client() as c:
             resp = c.post("/users/delete", follow_redirects=True)
 
@@ -510,56 +626,130 @@ class UserDeleteAndEditRouteViewTestCases(UserBaseViewTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Access unauthorized.", html)
 
-    # TODO: cant delete someone else
-
     # #############################################################
     # # Edit tests
 
-    # def test_user_edit_profile(self):
-    #     with app.test_client() as c:
-    #         with c.session_transaction() as sess:
-    #             sess[CURR_USER_KEY] = self.u2_id
+    def test_user_edit_profile_get(self):
+        """Tests form shows to edit user profile"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+            resp = c.get("/users/profile")
+            html = resp.get_data(as_text=True)
 
-    #             u2 = User.query.get(self.u2_id)
-    #             resp = c.post(
-    #                 "/users/profile",
-    #                 data={
-    #                     "username": "testusername",
-    #                     "email": "newemail@test.com",
-    #                     "location": "test location",
-    #                     "password": u2.password,
-    #                 },
-    #                 follow_redirects=True,
-    #             )
+        self.assertEqual(resp.status_code, 200)
+        u2 = User.query.get(self.u2_id)
+        self.assertIn(u2.username, html)
+        self.assertNotIn(u2.password, html)
+        self.assertIn(
+            "<!--This comment for testing involving edit.html-->", html
+        )
 
-    #         testuser = User.query.get(self.u2_id)
-    #         users = User.query.all()
+    def test_user_edit_profile(self):
+        """Tests successful edit of user profile"""
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+            resp = c.post(
+                "/users/profile",
+                data={
+                    "username": "testusername",
+                    "email": "newemail@test.com",
+                    "location": "test location",
+                    "password": "password",
+                },
+                follow_redirects=True,
+            )
 
-    #     self.assertEqual(resp.status_code, 200)
-    #     self.assertIn(testuser, users)
-    #     self.assertNotEqual(u2, testuser)
+            html = resp.get_data(as_text=True)
 
-    # def test_user_edit_profile_bad(self):
-    #     with app.test_client() as c:
-    #         with c.session_transaction() as sess:
-    #             sess[CURR_USER_KEY] = self.u2_id
+        self.assertIn("Updated Profile", html)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("testusername", html)
+        self.assertIn("test location", html)
 
-    #             resp = c.post(
-    #                 "/users/profile",
-    #                 data={
-    #                     "username": "testusername",
-    #                     "email": "newemail@test.com",
-    #                     "location": "test location",
-    #                     "password": "wrongpassword",
-    #                 },
-    #                 follow_redirects=True,
-    #             )
-    #             db.session.commit()
+    def test_user_edit_profile_bad(self):
+        """Wrong password when attempting to edit profile"""
 
-    #         html = resp.get_data(as_text=True)
-    #         testuser = User.query.get(self.u2_id)
-    #         users = User.query.all()
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
 
-    #     self.assertEqual(resp.status_code, 200)
-    #     self.assertIn(testuser, users)
-    #     self.assertIn("Invalid password", html)
+            resp = c.post(
+                "/users/profile",
+                data={
+                    "username": "testusername",
+                    "email": "newemail@test.com",
+                    "location": "test location",
+                    "password": "wrongpassword",
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Invalid password", html)
+
+    def test_user_edit_profile_bad_non_unique_username(self):
+        """Username is already taken test"""
+
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(
+                "/users/profile",
+                data={
+                    "username": "u1",
+                    "email": "newemail@test.com",
+                    "location": "test location",
+                    "password": "password",
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Username or email already in use", html)
+
+    def test_user_edit_profile_bad_non_unique_email(self):
+        """Username is already taken test"""
+
+        with app.test_client() as c:
+            with c.session_transaction() as sess:
+                sess[CURR_USER_KEY] = self.u2_id
+
+            resp = c.post(
+                "/users/profile",
+                data={
+                    "username": "u2",
+                    "email": "u1@email.com",
+                    "location": "test location",
+                    "password": "password",
+                },
+                follow_redirects=True,
+            )
+
+            html = resp.get_data(as_text=True)
+
+            self.assertEqual(resp.status_code, 200)
+            self.assertIn("Username or email already in use", html)
+
+    def test_user_edit_profile_bad_not_loggedin(self):
+        """Can't post edit profile if not logged in"""
+        with app.test_client() as c:
+            resp = c.post(
+                "/users/profile",
+                data={
+                    "username": "testusername",
+                    "email": "newemail@test.com",
+                    "location": "test location",
+                    "password": "password",
+                },
+                follow_redirects=True,
+            )
+
+        html = resp.get_data(as_text=True)
+        self.assertIn("Access unauthorized.", html)

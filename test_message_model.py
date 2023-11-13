@@ -60,6 +60,7 @@ class MessageModelTestCase(TestCase):
         db.session.rollback()
 
     def test_message_model(self):
+        """Tests that messages don't have any likes on start and m1 is tied to u1"""
         m1 = Message.query.get(self.m1_id)
         u1 = User.query.get(self.u1_id)
         # Message should have no likes
@@ -67,18 +68,21 @@ class MessageModelTestCase(TestCase):
         self.assertEqual(len(m1.likes), 0)
 
     def test_create_message_bad_user_id(self):
+        "Tests non-existent user id fail case"
         with self.assertRaises(IntegrityError):
             m2 = Message(text="test", user_id=0)
             db.session.add(m2)
             db.session.commit()
 
     def test_create_message_bad_text_is_none(self):
+        """Tets bad case text is none"""
         with self.assertRaises(IntegrityError):
             m2 = Message(text=None, user_id=0)
             db.session.add(m2)
             db.session.commit()
 
     def test_create_message_bad_text_is_too_long(self):
+        """Tests bad case for making a message text is too long"""
         with self.assertRaises(DataError):
             m2 = Message(
                 text=(
@@ -94,6 +98,8 @@ class MessageModelTestCase(TestCase):
     ################################################################
     # Likes Tests
     def test_message_likes(self):
+        """Tests the relationships for likes"""
+
         m1 = Message.query.get(self.m1_id)
         u1 = User.query.get(self.u1_id)
         u2 = User.query.get(self.u1_id)
@@ -104,4 +110,3 @@ class MessageModelTestCase(TestCase):
         self.assertIn(m1, u1.likes)
         self.assertIn(u1, m1.likes)
         self.assertIn(u2, m1.likes)
-

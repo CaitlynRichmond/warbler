@@ -110,6 +110,7 @@ class UserModelTestCase(TestCase):
         db.session.commit()
 
         users = User.query.all()
+        #Query users one or none, make sure not none would be better
 
         self.assertIn(u3, users)
         self.assertEqual(u3.image_url, DEFAULT_IMAGE_URL)
@@ -134,6 +135,8 @@ class UserModelTestCase(TestCase):
     #############################
     # User Model Edit Tests
     def test_edit_user_successful(self):
+        """Tests successfully adding a user"""
+
         u1 = User.query.get(self.u1_id)
 
         u1.edit_user(
@@ -206,7 +209,8 @@ class UserModelTestCase(TestCase):
                 "",
                 None,
             )
-            db.session.commit()
+
+    #TODO: group signups together
 
     ###########################################################
     # Authentication Tests
