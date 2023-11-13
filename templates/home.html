@@ -62,7 +62,7 @@
           {{ g.csrf_form.hidden_tag() }}
 
           <button type="submit" class="btn btn-link"><i
-              class="bi bi-emoji-heart-eyes{% if msg in g.user.likes %}-fill{% endif %}"></i></button>
+              class="bi bi-heart{% if msg in g.user.likes %}-fill{% endif %}"></i></button>
         </form>
         {% endif %}
       </li>
