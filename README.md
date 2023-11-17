@@ -68,4 +68,4 @@ python -m unittest
 
 
 ## Acknowledgements
-Warbler was built during my time at Rithm School, as part of a 3-day sprint. My partner on the backend was [Logan Winnie](https://github.com/loganwinnier)
+Warbler was built during my time at Rithm School, as part of a 3-day sprint. My partner for Warbler was [Logan Winnie](https://github.com/loganwinnier)
